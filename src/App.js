@@ -5,9 +5,9 @@ import Navigation from "./components/Navigation/Navigation";
 import Logo from "./components/Logo/Logo";
 import ImageLinkForm from "./components/ImageLinkForm/ImageLinkForm";
 import Rank from "./components/Rank/Rank";
+import FaceRecognition from "./components/FaceRecognition/FaceRecogniton";
+import Signin from "./components/Signin/Signin";
 import "./App.css";
-
-console.log(Clarifai);
 
 const app = new Clarifai.App({
   apiKey: "f55ad295b40a414c86e2bc6a11eaba5a",
@@ -30,26 +30,42 @@ class App extends Component {
     super();
     this.state = {
       input: "",
+      imageUrl: "",
+      box: {},
     };
   }
 
+  calculateFaceLocation = (data) => {
+    const clarifaiFace =
+      data.outputs[0].data.regions[0].region_info.bounding_box;
+    const image = document.getElementById("inputimage");
+    const width = Number(image.width);
+    const height = Number(image.height);
+    return {
+      leftCol: clarifaiFace.left_col * width,
+      topRow: clarifaiFace.top_row * height,
+      rightCol: width - (clarifaiFace.right_col * width),
+      bottomRow: height - (clarifaiFace.bottom_row * height),
+    };
+  };
+
+  displayFaceBox = (box) => {
+    console.log(box);
+    this.setState({ box: box });
+  };
+
   onInputChange = (event) => {
-    console.log(event.target.value);
+    this.setState({ input: event.target.value });
   };
 
   onButtonSubmit = () => {
-    console.log("click");
+    this.setState({ imageUrl: this.state.input });
     app.models
-      .predict(
-        "a403429f2ddf4b49b307e318f00e528b",
-        "https://blog.hootsuite.com/wp-content/uploads/2021/07/free-stock-photos-03-scaled.jpeg"
+      .predict(Clarifai.FACE_DETECT_MODEL, this.state.input)
+      .then((response) =>
+        this.displayFaceBox(this.calculateFaceLocation(response))
       )
-      .then(
-        function (response) {
-          console.log(response);
-        },
-        function (err) {}
-      );
+      .catch((err) => console.log(err));
   };
 
   render() {
@@ -63,6 +79,8 @@ class App extends Component {
           onInputChange={this.onInputChange}
           onButtonSubmit={this.onButtonSubmit}
         />
+        <FaceRecognition box={this.state.box} imageUrl={this.state.imageUrl} />
+        <Signin />
       </div>
     );
   }
